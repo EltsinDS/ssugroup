@@ -1,0 +1,80 @@
+{
+  "name": "project-composer",
+  "displayName": "Project Composer",
+  "description": "Start, stop, and restart Docker Compose with per-stand env presets. By SSU Group.",
+  "version": "0.2.0",
+  "publisher": "ssugroup",
+  "icon": "icon.png",
+  "engines": {
+    "vscode": "^1.74.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:projectComposeEnv.start",
+    "onCommand:projectComposeEnv.stop",
+    "onCommand:projectComposeEnv.restart",
+    "onCommand:projectComposeEnv.dockerClean"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "projectComposeEnv.start",
+        "title": "Project: Start (select stand, docker-compose up)"
+      },
+      {
+        "command": "projectComposeEnv.stop",
+        "title": "Project: Stop (docker-compose down)"
+      },
+      {
+        "command": "projectComposeEnv.restart",
+        "title": "Project: Restart (docker-compose restart)"
+      },
+      {
+        "command": "projectComposeEnv.dockerClean",
+        "title": "Project: Docker Clean"
+      }
+    ],
+    "configuration": {
+      "title": "Project Composer",
+      "properties": {
+        "projectComposeEnv.cleanNextOnStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove .next folder before starting (rebuilt in container)."
+        },
+        "projectComposeEnv.cleanNodeModulesOnStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove node_modules before starting (reinstalled in container)."
+        },
+        "projectComposeEnv.cleanYarnLockOnStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "Remove yarn.lock before starting (recreated in container)."
+        },
+        "projectComposeEnv.dockerCleanOnStop": {
+          "type": "boolean",
+          "default": false,
+          "description": "Run full Docker cleanup after Project: Stop."
+        },
+        "projectComposeEnv.restartServices": {
+          "type": "string",
+          "default": "",
+          "description": "Space-separated compose service names to restart (e.g. \"node\"). Empty — restart all services."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "npm run compile && vsce package"
+  },
+  "devDependencies": {
+    "@types/node": "^18.0.0",
+    "@types/vscode": "^1.74.0",
+    "typescript": "^5.0.0"
+  }
+}
