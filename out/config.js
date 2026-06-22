@@ -43,6 +43,9 @@ function getProjectComposeConfig(workspaceRoot) {
     const composeFileRel = config.get("composeFile") ?? "development/docker-compose.yml";
     const waitRaw = config.get("waitForContainers")?.trim() ?? "";
     const waitForContainers = waitRaw ? waitRaw.split(/\s+/).filter(Boolean) : [];
+    const warmupHttpOnStart = config.get("warmupHttpOnStart") ??
+        config.get("waitForHttpOnStart") ??
+        true;
     return {
         presetsDir: path.join(workspaceRoot, presetsPathRel),
         presetsPathRel,
@@ -57,7 +60,10 @@ function getProjectComposeConfig(workspaceRoot) {
         openUrls: config.get("openUrls") ?? [],
         waitForContainers,
         waitTimeoutMs: config.get("waitTimeoutMs") ?? 300000,
-        waitForHttpOnStart: config.get("waitForHttpOnStart") ?? true,
+        warmupHttpOnStart,
+        warmupUrl: config.get("warmupUrl")?.trim() ?? "",
+        warmupRequestTimeoutMs: config.get("warmupRequestTimeoutMs") ?? 120000,
+        secondaryUrlsDelayMs: config.get("secondaryUrlsDelayMs") ?? 5000,
     };
 }
 //# sourceMappingURL=config.js.map

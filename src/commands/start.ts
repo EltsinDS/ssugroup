@@ -5,7 +5,7 @@ import { listPresets, applyPreset } from "../env";
 import { getProjectComposeConfig } from "../config";
 import { runComposeUp } from "../composeExec";
 import { waitForContainersRunning } from "../waitForContainers";
-import { waitForHttpUrls } from "../waitForHttp";
+import { warmUpHttpUrl } from "../waitForHttp";
 import { getComposeCommand } from "../compose";
 
 function getWorkspaceRoot(): string | undefined {
@@ -22,10 +22,27 @@ function runInTerminal(workspaceRoot: string, command: string, name?: string): v
   terminal.sendText(command);
 }
 
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function openBrowserUrls(urls: string[]): Promise<void> {
   for (const url of urls) {
     await vscode.env.openExternal(vscode.Uri.parse(url));
   }
+}
+
+function resolveWarmupAndSecondaryUrls(
+  openUrls: string[],
+  warmupUrlSetting: string
+): { warmupUrl: string | undefined; secondaryUrls: string[] } {
+  if (openUrls.length === 0) {
+    return { warmupUrl: undefined, secondaryUrls: [] };
+  }
+
+  const warmupUrl = warmupUrlSetting || openUrls[0];
+  const secondaryUrls = openUrls.filter((url) => url !== warmupUrl);
+  return { warmupUrl, secondaryUrls };
 }
 
 export async function startCommand(): Promise<void> {
@@ -114,9 +131,7 @@ export async function startCommand(): Promise<void> {
         return;
       }
 
-      const shouldWait = cfg.waitForContainers.length > 0;
-
-      if (shouldWait) {
+      if (cfg.waitForContainers.length > 0) {
         const waitResult = await waitForContainersRunning(
           workspaceRoot,
           cfg.composeFileRel,
@@ -132,28 +147,47 @@ export async function startCommand(): Promise<void> {
         }
       }
 
-      if (cfg.openBrowserOnStart && cfg.waitForHttpOnStart && cfg.openUrls.length > 0) {
-        const httpResult = await waitForHttpUrls(
-          cfg.openUrls,
+      const { warmupUrl, secondaryUrls } = resolveWarmupAndSecondaryUrls(
+        cfg.openUrls,
+        cfg.warmupUrl
+      );
+
+      if (cfg.openBrowserOnStart && cfg.warmupHttpOnStart && warmupUrl) {
+        const warmed = await warmUpHttpUrl(
+          warmupUrl,
           cfg.waitTimeoutMs,
+          cfg.warmupRequestTimeoutMs,
           (message) => progress.report({ message })
         );
 
-        if (!httpResult.ok) {
+        if (!warmed) {
           vscode.window.showWarningMessage(
-            `Timeout waiting for HTTP: ${httpResult.pending.join(", ")}. Opening browser anyway — page may still be compiling.`
+            `Warm-up timeout for ${warmupUrl}. Opening browser anyway — page may still be compiling.`
           );
         }
       }
 
       if (cfg.openBrowserOnStart) {
-        if (cfg.openUrls.length === 0) {
+        if (!warmupUrl && cfg.openUrls.length === 0) {
           vscode.window.showWarningMessage(
             "openBrowserOnStart is enabled but openUrls is empty. Add URLs in projectComposeEnv.openUrls."
           );
         } else {
           progress.report({ message: "Opening browser..." });
-          await openBrowserUrls(cfg.openUrls);
+
+          if (warmupUrl) {
+            await openBrowserUrls([warmupUrl]);
+          }
+
+          if (secondaryUrls.length > 0) {
+            if (cfg.secondaryUrlsDelayMs > 0) {
+              progress.report({
+                message: `Waiting ${cfg.secondaryUrlsDelayMs / 1000}s before secondary URLs...`,
+              });
+              await sleep(cfg.secondaryUrlsDelayMs);
+            }
+            await openBrowserUrls(secondaryUrls);
+          }
         }
       }
 

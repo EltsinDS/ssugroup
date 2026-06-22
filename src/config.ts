@@ -15,7 +15,10 @@ export interface ProjectComposeConfig {
   openUrls: string[];
   waitForContainers: string[];
   waitTimeoutMs: number;
-  waitForHttpOnStart: boolean;
+  warmupHttpOnStart: boolean;
+  warmupUrl: string;
+  warmupRequestTimeoutMs: number;
+  secondaryUrlsDelayMs: number;
 }
 
 export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeConfig {
@@ -27,6 +30,11 @@ export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeCo
 
   const waitRaw = config.get<string>("waitForContainers")?.trim() ?? "";
   const waitForContainers = waitRaw ? waitRaw.split(/\s+/).filter(Boolean) : [];
+
+  const warmupHttpOnStart =
+    config.get<boolean>("warmupHttpOnStart") ??
+    config.get<boolean>("waitForHttpOnStart") ??
+    true;
 
   return {
     presetsDir: path.join(workspaceRoot, presetsPathRel),
@@ -42,6 +50,9 @@ export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeCo
     openUrls: config.get<string[]>("openUrls") ?? [],
     waitForContainers,
     waitTimeoutMs: config.get<number>("waitTimeoutMs") ?? 300_000,
-    waitForHttpOnStart: config.get<boolean>("waitForHttpOnStart") ?? true,
+    warmupHttpOnStart,
+    warmupUrl: config.get<string>("warmupUrl")?.trim() ?? "",
+    warmupRequestTimeoutMs: config.get<number>("warmupRequestTimeoutMs") ?? 120_000,
+    secondaryUrlsDelayMs: config.get<number>("secondaryUrlsDelayMs") ?? 5_000,
   };
 }

@@ -2,7 +2,7 @@
   "name": "project-composer",
   "displayName": "Project Composer",
   "description": "Start, stop, and restart Docker Compose with per-stand env presets. By SSU Group.",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "publisher": "ssugroup",
   "icon": "icon.png",
   "engines": {
@@ -97,12 +97,27 @@
         "projectComposeEnv.waitTimeoutMs": {
           "type": "number",
           "default": 300000,
-          "description": "Max wait time for containers (running) and HTTP readiness (ms). Default: 5 minutes."
+          "description": "Max wait time for containers (running) and HTTP warm-up (ms). Default: 5 minutes."
         },
-        "projectComposeEnv.waitForHttpOnStart": {
+        "projectComposeEnv.warmupHttpOnStart": {
           "type": "boolean",
           "default": true,
-          "description": "Before opening browser, poll openUrls until HTTP responds (avoids nginx 502 while Next.js is still starting)."
+          "description": "Before opening browser, warm up warmupUrl with long HTTP requests (triggers Next.js compile)."
+        },
+        "projectComposeEnv.warmupUrl": {
+          "type": "string",
+          "default": "",
+          "description": "Primary URL to warm up before opening browser (e.g. http://web.localhost:4000). Empty — first openUrls entry."
+        },
+        "projectComposeEnv.warmupRequestTimeoutMs": {
+          "type": "number",
+          "default": 120000,
+          "description": "Timeout per warm-up HTTP request (ms). Default: 2 minutes."
+        },
+        "projectComposeEnv.secondaryUrlsDelayMs": {
+          "type": "number",
+          "default": 5000,
+          "description": "Delay before opening secondary openUrls (e.g. Storybook) after primary URL."
         }
       }
     }

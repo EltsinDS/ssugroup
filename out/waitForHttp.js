@@ -33,17 +33,16 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.waitForHttpUrls = waitForHttpUrls;
+exports.warmUpHttpUrl = warmUpHttpUrl;
 const http = __importStar(require("http"));
 const https = __importStar(require("https"));
-const POLL_INTERVAL_MS = 2000;
+const RETRY_INTERVAL_MS = 2000;
 function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 function isHttpReady(statusCode) {
     if (statusCode === undefined)
         return false;
-    // nginx отдаёт 502, пока Next.js ещё не слушает upstream
     return statusCode > 0 && statusCode < 500;
 }
 function probeUrl(url, timeoutMs) {
@@ -69,29 +68,23 @@ function probeUrl(url, timeoutMs) {
         }
     });
 }
-async function waitForHttpUrls(urls, timeoutMs, onProgress) {
-    if (urls.length === 0) {
-        return { ok: true, pending: [] };
-    }
-    const deadline = Date.now() + timeoutMs;
-    const uniqueUrls = [...new Set(urls)];
+/**
+ * Долгий warm-up одного URL: повторяет GET с большим timeout, пока Next.js не ответит < 500.
+ * Один запрос может ждать компиляцию; между попытками — короткая пауза.
+ */
+async function warmUpHttpUrl(url, totalTimeoutMs, perRequestTimeoutMs, onProgress) {
+    const deadline = Date.now() + totalTimeoutMs;
     while (Date.now() < deadline) {
-        const checks = await Promise.all(uniqueUrls.map(async (url) => ({
-            url,
-            ready: await probeUrl(url, 5000),
-        })));
-        const pending = checks.filter((c) => !c.ready).map((c) => c.url);
-        if (pending.length === 0) {
-            return { ok: true, pending: [] };
+        onProgress?.(`Warming up ${url}...`);
+        const ready = await probeUrl(url, perRequestTimeoutMs);
+        if (ready) {
+            return true;
         }
-        onProgress?.(`Waiting for HTTP: ${pending.join(", ")}`);
-        await sleep(POLL_INTERVAL_MS);
+        if (Date.now() + RETRY_INTERVAL_MS >= deadline) {
+            break;
+        }
+        await sleep(RETRY_INTERVAL_MS);
     }
-    const finalChecks = await Promise.all(uniqueUrls.map(async (url) => ({
-        url,
-        ready: await probeUrl(url, 5000),
-    })));
-    const pending = finalChecks.filter((c) => !c.ready).map((c) => c.url);
-    return { ok: pending.length === 0, pending };
+    return false;
 }
 //# sourceMappingURL=waitForHttp.js.map

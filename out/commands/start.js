@@ -55,10 +55,21 @@ function runInTerminal(workspaceRoot, command, name) {
     terminal.show();
     terminal.sendText(command);
 }
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
 async function openBrowserUrls(urls) {
     for (const url of urls) {
         await vscode.env.openExternal(vscode.Uri.parse(url));
     }
+}
+function resolveWarmupAndSecondaryUrls(openUrls, warmupUrlSetting) {
+    if (openUrls.length === 0) {
+        return { warmupUrl: undefined, secondaryUrls: [] };
+    }
+    const warmupUrl = warmupUrlSetting || openUrls[0];
+    const secondaryUrls = openUrls.filter((url) => url !== warmupUrl);
+    return { warmupUrl, secondaryUrls };
 }
 async function startCommand() {
     const workspaceRoot = getWorkspaceRoot();
@@ -128,26 +139,37 @@ async function startCommand() {
             vscode.window.showErrorMessage(`docker compose up failed. See terminal for details.${upResult.stderr ? ` ${upResult.stderr.trim()}` : ""}`);
             return;
         }
-        const shouldWait = cfg.waitForContainers.length > 0;
-        if (shouldWait) {
+        if (cfg.waitForContainers.length > 0) {
             const waitResult = await (0, waitForContainers_1.waitForContainersRunning)(workspaceRoot, cfg.composeFileRel, cfg.waitForContainers, cfg.waitTimeoutMs, (message) => progress.report({ message }));
             if (!waitResult.ok) {
                 vscode.window.showWarningMessage(`Timeout waiting for containers: ${waitResult.missing.join(", ")}. Stack is up; open URLs manually if needed.`);
             }
         }
-        if (cfg.openBrowserOnStart && cfg.waitForHttpOnStart && cfg.openUrls.length > 0) {
-            const httpResult = await (0, waitForHttp_1.waitForHttpUrls)(cfg.openUrls, cfg.waitTimeoutMs, (message) => progress.report({ message }));
-            if (!httpResult.ok) {
-                vscode.window.showWarningMessage(`Timeout waiting for HTTP: ${httpResult.pending.join(", ")}. Opening browser anyway — page may still be compiling.`);
+        const { warmupUrl, secondaryUrls } = resolveWarmupAndSecondaryUrls(cfg.openUrls, cfg.warmupUrl);
+        if (cfg.openBrowserOnStart && cfg.warmupHttpOnStart && warmupUrl) {
+            const warmed = await (0, waitForHttp_1.warmUpHttpUrl)(warmupUrl, cfg.waitTimeoutMs, cfg.warmupRequestTimeoutMs, (message) => progress.report({ message }));
+            if (!warmed) {
+                vscode.window.showWarningMessage(`Warm-up timeout for ${warmupUrl}. Opening browser anyway — page may still be compiling.`);
             }
         }
         if (cfg.openBrowserOnStart) {
-            if (cfg.openUrls.length === 0) {
+            if (!warmupUrl && cfg.openUrls.length === 0) {
                 vscode.window.showWarningMessage("openBrowserOnStart is enabled but openUrls is empty. Add URLs in projectComposeEnv.openUrls.");
             }
             else {
                 progress.report({ message: "Opening browser..." });
-                await openBrowserUrls(cfg.openUrls);
+                if (warmupUrl) {
+                    await openBrowserUrls([warmupUrl]);
+                }
+                if (secondaryUrls.length > 0) {
+                    if (cfg.secondaryUrlsDelayMs > 0) {
+                        progress.report({
+                            message: `Waiting ${cfg.secondaryUrlsDelayMs / 1000}s before secondary URLs...`,
+                        });
+                        await sleep(cfg.secondaryUrlsDelayMs);
+                    }
+                    await openBrowserUrls(secondaryUrls);
+                }
             }
         }
         vscode.window.showInformationMessage(`Stand: ${selected}. Docker Compose is running.`);
