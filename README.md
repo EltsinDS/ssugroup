@@ -57,7 +57,8 @@ Your project must have:
 | `projectComposeEnv.openBrowserOnStart` | `false` | Open `openUrls` after start |
 | `projectComposeEnv.openUrls` | `[]` | URLs to open (e.g. `http://web.localhost:4000`) |
 | `projectComposeEnv.waitForContainers` | `""` | Space-separated container name tokens (e.g. `node-1 storybook-1 nginx-1`). Waits until `docker compose ps` reports them as **running**. Matches by full name or suffix (`um_mos_ru-node-1` matches `node-1`). |
-| `projectComposeEnv.waitTimeoutMs` | `300000` | Max wait time (5 minutes) |
+| `projectComposeEnv.waitTimeoutMs` | `300000` | Max wait for containers + HTTP (5 min) |
+| `projectComposeEnv.waitForHttpOnStart` | `true` | Poll `openUrls` until HTTP &lt; 500 before opening browser (avoids 502 while Next.js starts) |
 
 ### Stop / restart
 

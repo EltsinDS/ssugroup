@@ -15,6 +15,7 @@ export interface ProjectComposeConfig {
   openUrls: string[];
   waitForContainers: string[];
   waitTimeoutMs: number;
+  waitForHttpOnStart: boolean;
 }
 
 export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeConfig {
@@ -41,5 +42,6 @@ export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeCo
     openUrls: config.get<string[]>("openUrls") ?? [],
     waitForContainers,
     waitTimeoutMs: config.get<number>("waitTimeoutMs") ?? 300_000,
+    waitForHttpOnStart: config.get<boolean>("waitForHttpOnStart") ?? true,
   };
 }

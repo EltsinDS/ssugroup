@@ -41,6 +41,7 @@ const env_1 = require("../env");
 const config_1 = require("../config");
 const composeExec_1 = require("../composeExec");
 const waitForContainers_1 = require("../waitForContainers");
+const waitForHttp_1 = require("../waitForHttp");
 const compose_1 = require("../compose");
 function getWorkspaceRoot() {
     const folder = vscode.workspace.workspaceFolders?.[0];
@@ -132,6 +133,12 @@ async function startCommand() {
             const waitResult = await (0, waitForContainers_1.waitForContainersRunning)(workspaceRoot, cfg.composeFileRel, cfg.waitForContainers, cfg.waitTimeoutMs, (message) => progress.report({ message }));
             if (!waitResult.ok) {
                 vscode.window.showWarningMessage(`Timeout waiting for containers: ${waitResult.missing.join(", ")}. Stack is up; open URLs manually if needed.`);
+            }
+        }
+        if (cfg.openBrowserOnStart && cfg.waitForHttpOnStart && cfg.openUrls.length > 0) {
+            const httpResult = await (0, waitForHttp_1.waitForHttpUrls)(cfg.openUrls, cfg.waitTimeoutMs, (message) => progress.report({ message }));
+            if (!httpResult.ok) {
+                vscode.window.showWarningMessage(`Timeout waiting for HTTP: ${httpResult.pending.join(", ")}. Opening browser anyway — page may still be compiling.`);
             }
         }
         if (cfg.openBrowserOnStart) {

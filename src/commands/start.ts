@@ -5,6 +5,7 @@ import { listPresets, applyPreset } from "../env";
 import { getProjectComposeConfig } from "../config";
 import { runComposeUp } from "../composeExec";
 import { waitForContainersRunning } from "../waitForContainers";
+import { waitForHttpUrls } from "../waitForHttp";
 import { getComposeCommand } from "../compose";
 
 function getWorkspaceRoot(): string | undefined {
@@ -127,6 +128,20 @@ export async function startCommand(): Promise<void> {
         if (!waitResult.ok) {
           vscode.window.showWarningMessage(
             `Timeout waiting for containers: ${waitResult.missing.join(", ")}. Stack is up; open URLs manually if needed.`
+          );
+        }
+      }
+
+      if (cfg.openBrowserOnStart && cfg.waitForHttpOnStart && cfg.openUrls.length > 0) {
+        const httpResult = await waitForHttpUrls(
+          cfg.openUrls,
+          cfg.waitTimeoutMs,
+          (message) => progress.report({ message })
+        );
+
+        if (!httpResult.ok) {
+          vscode.window.showWarningMessage(
+            `Timeout waiting for HTTP: ${httpResult.pending.join(", ")}. Opening browser anyway — page may still be compiling.`
           );
         }
       }

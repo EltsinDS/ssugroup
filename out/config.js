@@ -57,6 +57,7 @@ function getProjectComposeConfig(workspaceRoot) {
         openUrls: config.get("openUrls") ?? [],
         waitForContainers,
         waitTimeoutMs: config.get("waitTimeoutMs") ?? 300000,
+        waitForHttpOnStart: config.get("waitForHttpOnStart") ?? true,
     };
 }
 //# sourceMappingURL=config.js.map

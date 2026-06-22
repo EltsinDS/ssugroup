@@ -2,7 +2,7 @@
   "name": "project-composer",
   "displayName": "Project Composer",
   "description": "Start, stop, and restart Docker Compose with per-stand env presets. By SSU Group.",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "publisher": "ssugroup",
   "icon": "icon.png",
   "engines": {
@@ -97,7 +97,12 @@
         "projectComposeEnv.waitTimeoutMs": {
           "type": "number",
           "default": 300000,
-          "description": "Max wait time for containers to reach running state (ms). Default: 5 minutes."
+          "description": "Max wait time for containers (running) and HTTP readiness (ms). Default: 5 minutes."
+        },
+        "projectComposeEnv.waitForHttpOnStart": {
+          "type": "boolean",
+          "default": true,
+          "description": "Before opening browser, poll openUrls until HTTP responds (avoids nginx 502 while Next.js is still starting)."
         }
       }
     }
