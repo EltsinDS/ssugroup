@@ -74,11 +74,10 @@ export function mergeEnv(baseContent: string, presetContent: string): string {
 }
 
 /**
- * Read preset names from development/.env.presets/ (files ending with .env).
+ * Read preset names from presets directory (files ending with .env).
  * Returns array of preset names (filename without .env).
  */
-export function listPresets(workspaceRoot: string): string[] {
-  const presetsDir = path.join(workspaceRoot, "development", ".env.presets");
+export function listPresets(presetsDir: string): string[] {
   if (!fs.existsSync(presetsDir) || !fs.statSync(presetsDir).isDirectory()) {
     return [];
   }
@@ -92,25 +91,18 @@ export function listPresets(workspaceRoot: string): string[] {
 /**
  * Read preset file content.
  */
-export function readPreset(workspaceRoot: string, presetName: string): string {
-  const filePath = path.join(workspaceRoot, "development", ".env.presets", `${presetName}.env`);
+export function readPreset(presetsDir: string, presetName: string): string {
+  const filePath = path.join(presetsDir, `${presetName}.env`);
   return fs.readFileSync(filePath, "utf-8");
 }
 
 /**
- * Path to development/.env.development
+ * Apply preset to target env file and write back.
+ * Only keys that exist in the target file are overwritten from the preset.
  */
-export function envDevelopmentPath(workspaceRoot: string): string {
-  return path.join(workspaceRoot, "development", ".env.development");
-}
-
-/**
- * Apply preset to .env.development and write back.
- */
-export function applyPresetToEnvDevelopment(workspaceRoot: string, presetName: string): void {
-  const envPath = envDevelopmentPath(workspaceRoot);
-  const baseContent = fs.readFileSync(envPath, "utf-8");
-  const presetContent = readPreset(workspaceRoot, presetName);
+export function applyPreset(envTargetFile: string, presetsDir: string, presetName: string): void {
+  const baseContent = fs.readFileSync(envTargetFile, "utf-8");
+  const presetContent = readPreset(presetsDir, presetName);
   const merged = mergeEnv(baseContent, presetContent);
-  fs.writeFileSync(envPath, merged, "utf-8");
+  fs.writeFileSync(envTargetFile, merged, "utf-8");
 }

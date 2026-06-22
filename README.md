@@ -1,51 +1,90 @@
 # Project Composer
 
-VS Code / Cursor extension by **SSU Group** to start, stop, and restart Docker Compose projects with **per-stand env presets**. Works on **Windows**, **macOS** (Intel and Apple Silicon), and **Linux**. Choose which backend stand to use from the Command Palette; the extension merges the selected preset into `development/.env.development` and runs `docker compose` from the project root.
+VS Code / Cursor extension by **SSU Group** to start, stop, and restart Docker Compose projects with **per-stand env presets**. Works on **Windows**, **macOS** (Intel and Apple Silicon), and **Linux**. Choose which backend stand to use from the Command Palette; the extension merges the selected preset into your target env file and runs `docker compose` from the project root.
 
 ## Commands (Cmd+Shift+P / Ctrl+Shift+P)
 
-- **Project: Start (select stand, docker-compose up)** — Pick a stand from presets, apply env, optionally clean `.next` / `node_modules` / `yarn.lock`, then run `docker compose -f development/docker-compose.yml up -d`.
+- **Project: Start (select stand, docker-compose up)** — Pick a stand from presets, apply env, optionally clean `.next` / `node_modules` / `yarn.lock`, run `docker compose up -d`, optionally wait for containers, optionally open URLs in the browser.
 - **Project: Stop (docker-compose down)** — Run `docker compose down`. Optionally runs full Docker cleanup if enabled in settings.
 - **Project: Restart (docker-compose restart)** — Quick restart of running containers without rebuild (`docker compose restart`). Use when the stack is up but the app stopped responding (e.g. Next.js exited inside a live container).
 - **Project: Docker Clean** — Run full Docker cleanup (system prune, volumes, images, builder cache).
 
-## Project setup: presets
+## How env presets work
 
-Presets are **per project** and shared via git. The extension does not hardcode stands or variables.
+The extension does **not** hardcode stands or variable names. For each project you configure paths in settings (defaults below).
 
-1. In your project, create folder: **`development/.env.presets/`**
-2. Add one file per stand, e.g.:
-   - `demo.env`
-   - `staging.env`
-   - `dev-1.env`
-   - `dev-2.env`
-3. Each file contains **only the variables that differ between stands** (e.g. API URLs). Example:
+1. **Presets folder** (`projectComposeEnv.presetsPath`, default `development/.env.presets/`) — one file per stand: `demo.env`, `test-1.env`, etc.
+2. **Target env file** (`projectComposeEnv.envTargetFile`, default `development/.env.development`) — base env with all keys, comments, and order.
+3. On **Project: Start**, after you pick a stand, the extension:
+   - reads `{presetsPath}/{stand}.env`;
+   - **overwrites in the target file only those `KEY=VALUE` lines whose keys already exist in the target file**;
+   - preserves comments, empty lines, and keys that are not listed in the preset.
+
+Keys that exist **only** in the preset but not in the target file are **not added**. Add new keys to the target env first, then override them from presets.
+
+Example preset (`demo.env`):
 
 ```env
-NEXT_PUBLIC_API_URL=https://api.demo.example.com/v2
-NEXT_PUBLIC_APP_URL=https://demo.example.com
-NEXT_PUBLIC_SSE_SERVER=https://demo.example.com/.well-known/mercure?topic={topic}
-NEXT_PUBLIC_SSE_TOPIC=/user/{id}/events
+BACKEND_API=https://demo.um-mos-ru-api.arboost.ru
+BACKEND_API_HOST=demo.um-mos-ru-api.arboost.ru
 ```
 
-4. The extension merges the chosen preset into **`development/.env.development`** (only keys present in the preset file are overwritten; comments and other variables are kept).
+## Project setup
 
 Your project must have:
 
-- `development/docker-compose.yml`
-- `development/.env.development` (base env file)
+- `development/docker-compose.yml` (or path from `projectComposeEnv.composeFile`)
+- target env file (default `development/.env.development`)
+- presets folder with `*.env` files
 
 ## Settings
 
-- **projectComposeEnv.cleanNextOnStart** — Remove `.next` before start (default: false).
-- **projectComposeEnv.cleanNodeModulesOnStart** — Remove `node_modules` before start (default: false).
-- **projectComposeEnv.cleanYarnLockOnStart** — Remove `yarn.lock` before start (default: false).
-- **projectComposeEnv.dockerCleanOnStop** — After Project: Stop, run full Docker cleanup (default: false).
-- **projectComposeEnv.restartServices** — Space-separated service names for Project: Restart (e.g. `node`). Empty — restart all services (default: empty).
+### Paths (relative to workspace root)
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `projectComposeEnv.presetsPath` | `development/.env.presets` | Folder with stand preset files |
+| `projectComposeEnv.envTargetFile` | `development/.env.development` | Env file to merge presets into |
+| `projectComposeEnv.composeFile` | `development/docker-compose.yml` | Docker Compose file |
+
+### Start / cleanup
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `projectComposeEnv.cleanNextOnStart` | `false` | Remove `.next` before start |
+| `projectComposeEnv.cleanNodeModulesOnStart` | `false` | Remove `node_modules` before start |
+| `projectComposeEnv.cleanYarnLockOnStart` | `false` | Remove `yarn.lock` before start |
+| `projectComposeEnv.openBrowserOnStart` | `false` | Open `openUrls` after start |
+| `projectComposeEnv.openUrls` | `[]` | URLs to open (e.g. `http://web.localhost:4000`) |
+| `projectComposeEnv.waitForContainers` | `""` | Space-separated container name tokens (e.g. `node-1 storybook-1 nginx-1`). Waits until `docker compose ps` reports them as **running**. Matches by full name or suffix (`um_mos_ru-node-1` matches `node-1`). |
+| `projectComposeEnv.waitTimeoutMs` | `300000` | Max wait time (5 minutes) |
+
+### Stop / restart
+
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `projectComposeEnv.dockerCleanOnStop` | `false` | Full Docker cleanup after Stop |
+| `projectComposeEnv.restartServices` | `""` | Compose service names for Restart (empty = all) |
+
+### Example: um-mos-ru
+
+```json
+{
+  "projectComposeEnv.openBrowserOnStart": true,
+  "projectComposeEnv.openUrls": [
+    "http://web.localhost:4000",
+    "http://web.localhost:6006"
+  ],
+  "projectComposeEnv.waitForContainers": "node-1 storybook-1 nginx-1",
+  "projectComposeEnv.waitTimeoutMs": 300000
+}
+```
+
+Open the app at **`http://web.localhost:4000`** (not `localhost:4000`) so server `API_ORIGIN` and browser origin match.
 
 ## Install from VSIX
 
-1. Build: `npm run compile` then `npx @vscode/vsce package`
+1. Build: `npm run package`
 2. Install: Extensions → "..." → Install from VSIX → choose the generated `.vsix` file.
 
 ## License

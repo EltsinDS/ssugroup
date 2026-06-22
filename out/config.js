@@ -33,36 +33,30 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.restartCommand = restartCommand;
+exports.getProjectComposeConfig = getProjectComposeConfig;
 const vscode = __importStar(require("vscode"));
-const compose_1 = require("../compose");
-const config_1 = require("../config");
-function getWorkspaceRoot() {
-    const folder = vscode.workspace.workspaceFolders?.[0];
-    return folder?.uri.fsPath;
-}
-function runInTerminal(workspaceRoot, command, name) {
-    const terminal = vscode.window.createTerminal({
-        cwd: workspaceRoot,
-        name: name ?? "Project Composer",
-    });
-    terminal.show();
-    terminal.sendText(command);
-}
-async function restartCommand() {
-    const workspaceRoot = getWorkspaceRoot();
-    if (!workspaceRoot) {
-        vscode.window.showErrorMessage("No workspace folder open.");
-        return;
-    }
-    const cfg = (0, config_1.getProjectComposeConfig)(workspaceRoot);
+const path = __importStar(require("path"));
+function getProjectComposeConfig(workspaceRoot) {
     const config = vscode.workspace.getConfiguration("projectComposeEnv");
-    const services = config.get("restartServices")?.trim();
-    const serviceArg = services ? ` ${services}` : "";
-    const restartCmd = `${(0, compose_1.getComposeCommand)()} -f ${cfg.composeFileRel} restart${serviceArg}`;
-    vscode.window.showInformationMessage(services
-        ? `Restarting services: ${services}...`
-        : "Restarting docker-compose services...");
-    runInTerminal(workspaceRoot, restartCmd, "Project Restart");
+    const presetsPathRel = config.get("presetsPath") ?? "development/.env.presets";
+    const envTargetFileRel = config.get("envTargetFile") ?? "development/.env.development";
+    const composeFileRel = config.get("composeFile") ?? "development/docker-compose.yml";
+    const waitRaw = config.get("waitForContainers")?.trim() ?? "";
+    const waitForContainers = waitRaw ? waitRaw.split(/\s+/).filter(Boolean) : [];
+    return {
+        presetsDir: path.join(workspaceRoot, presetsPathRel),
+        presetsPathRel,
+        envTargetFile: path.join(workspaceRoot, envTargetFileRel),
+        envTargetFileRel,
+        composeFile: path.join(workspaceRoot, composeFileRel),
+        composeFileRel,
+        cleanNextOnStart: config.get("cleanNextOnStart") ?? false,
+        cleanNodeModulesOnStart: config.get("cleanNodeModulesOnStart") ?? false,
+        cleanYarnLockOnStart: config.get("cleanYarnLockOnStart") ?? false,
+        openBrowserOnStart: config.get("openBrowserOnStart") ?? false,
+        openUrls: config.get("openUrls") ?? [],
+        waitForContainers,
+        waitTimeoutMs: config.get("waitTimeoutMs") ?? 300000,
+    };
 }
-//# sourceMappingURL=restart.js.map
+//# sourceMappingURL=config.js.map

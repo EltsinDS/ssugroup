@@ -38,8 +38,7 @@ exports.parseEnvToLines = parseEnvToLines;
 exports.mergeEnv = mergeEnv;
 exports.listPresets = listPresets;
 exports.readPreset = readPreset;
-exports.envDevelopmentPath = envDevelopmentPath;
-exports.applyPresetToEnvDevelopment = applyPresetToEnvDevelopment;
+exports.applyPreset = applyPreset;
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const ENV_LINE = /^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/;
@@ -111,11 +110,10 @@ function mergeEnv(baseContent, presetContent) {
     return out.join("\n");
 }
 /**
- * Read preset names from development/.env.presets/ (files ending with .env).
+ * Read preset names from presets directory (files ending with .env).
  * Returns array of preset names (filename without .env).
  */
-function listPresets(workspaceRoot) {
-    const presetsDir = path.join(workspaceRoot, "development", ".env.presets");
+function listPresets(presetsDir) {
     if (!fs.existsSync(presetsDir) || !fs.statSync(presetsDir).isDirectory()) {
         return [];
     }
@@ -128,24 +126,18 @@ function listPresets(workspaceRoot) {
 /**
  * Read preset file content.
  */
-function readPreset(workspaceRoot, presetName) {
-    const filePath = path.join(workspaceRoot, "development", ".env.presets", `${presetName}.env`);
+function readPreset(presetsDir, presetName) {
+    const filePath = path.join(presetsDir, `${presetName}.env`);
     return fs.readFileSync(filePath, "utf-8");
 }
 /**
- * Path to development/.env.development
+ * Apply preset to target env file and write back.
+ * Only keys that exist in the target file are overwritten from the preset.
  */
-function envDevelopmentPath(workspaceRoot) {
-    return path.join(workspaceRoot, "development", ".env.development");
-}
-/**
- * Apply preset to .env.development and write back.
- */
-function applyPresetToEnvDevelopment(workspaceRoot, presetName) {
-    const envPath = envDevelopmentPath(workspaceRoot);
-    const baseContent = fs.readFileSync(envPath, "utf-8");
-    const presetContent = readPreset(workspaceRoot, presetName);
+function applyPreset(envTargetFile, presetsDir, presetName) {
+    const baseContent = fs.readFileSync(envTargetFile, "utf-8");
+    const presetContent = readPreset(presetsDir, presetName);
     const merged = mergeEnv(baseContent, presetContent);
-    fs.writeFileSync(envPath, merged, "utf-8");
+    fs.writeFileSync(envTargetFile, merged, "utf-8");
 }
 //# sourceMappingURL=env.js.map

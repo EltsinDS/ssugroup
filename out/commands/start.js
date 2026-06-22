@@ -38,8 +38,10 @@ const vscode = __importStar(require("vscode"));
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
 const env_1 = require("../env");
+const config_1 = require("../config");
+const composeExec_1 = require("../composeExec");
+const waitForContainers_1 = require("../waitForContainers");
 const compose_1 = require("../compose");
-const COMPOSE_FILE = "development/docker-compose.yml";
 function getWorkspaceRoot() {
     const folder = vscode.workspace.workspaceFolders?.[0];
     return folder?.uri.fsPath;
@@ -52,25 +54,33 @@ function runInTerminal(workspaceRoot, command, name) {
     terminal.show();
     terminal.sendText(command);
 }
+async function openBrowserUrls(urls) {
+    for (const url of urls) {
+        await vscode.env.openExternal(vscode.Uri.parse(url));
+    }
+}
 async function startCommand() {
     const workspaceRoot = getWorkspaceRoot();
     if (!workspaceRoot) {
         vscode.window.showErrorMessage("No workspace folder open.");
         return;
     }
-    const presetsDir = path.join(workspaceRoot, "development", ".env.presets");
-    const envPath = (0, env_1.envDevelopmentPath)(workspaceRoot);
-    if (!fs.existsSync(presetsDir) || !fs.statSync(presetsDir).isDirectory()) {
-        vscode.window.showErrorMessage("Folder development/.env.presets not found. Add preset files (e.g. demo.env) there.");
+    const cfg = (0, config_1.getProjectComposeConfig)(workspaceRoot);
+    if (!fs.existsSync(cfg.presetsDir) || !fs.statSync(cfg.presetsDir).isDirectory()) {
+        vscode.window.showErrorMessage(`Presets folder not found: ${cfg.presetsPathRel}. Add preset files (e.g. demo.env) there.`);
         return;
     }
-    const presets = (0, env_1.listPresets)(workspaceRoot);
+    const presets = (0, env_1.listPresets)(cfg.presetsDir);
     if (presets.length === 0) {
-        vscode.window.showErrorMessage("No .env preset files in development/.env.presets (e.g. demo.env).");
+        vscode.window.showErrorMessage(`No .env preset files in ${cfg.presetsPathRel} (e.g. demo.env).`);
         return;
     }
-    if (!fs.existsSync(envPath)) {
-        vscode.window.showErrorMessage("development/.env.development not found.");
+    if (!fs.existsSync(cfg.envTargetFile)) {
+        vscode.window.showErrorMessage(`Env target file not found: ${cfg.envTargetFileRel}`);
+        return;
+    }
+    if (!fs.existsSync(cfg.composeFile)) {
+        vscode.window.showErrorMessage(`Compose file not found: ${cfg.composeFileRel}`);
         return;
     }
     const selected = await vscode.window.showQuickPick(presets, {
@@ -80,22 +90,18 @@ async function startCommand() {
     if (selected === undefined)
         return;
     try {
-        (0, env_1.applyPresetToEnvDevelopment)(workspaceRoot, selected);
+        (0, env_1.applyPreset)(cfg.envTargetFile, cfg.presetsDir, selected);
     }
     catch (e) {
         vscode.window.showErrorMessage(`Failed to apply preset "${selected}": ${e instanceof Error ? e.message : String(e)}`);
         return;
     }
-    const config = vscode.workspace.getConfiguration("projectComposeEnv");
-    const cleanNext = config.get("cleanNextOnStart") ?? false;
-    const cleanNodeModules = config.get("cleanNodeModulesOnStart") ?? false;
-    const cleanYarnLock = config.get("cleanYarnLockOnStart") ?? false;
     const toRemove = [];
-    if (cleanNext)
+    if (cfg.cleanNextOnStart)
         toRemove.push(".next");
-    if (cleanNodeModules)
+    if (cfg.cleanNodeModulesOnStart)
         toRemove.push("node_modules");
-    if (cleanYarnLock)
+    if (cfg.cleanYarnLockOnStart)
         toRemove.push("yarn.lock");
     for (const rel of toRemove) {
         const full = path.join(workspaceRoot, rel);
@@ -108,8 +114,36 @@ async function startCommand() {
             }
         }
     }
-    vscode.window.showInformationMessage(`Stand: ${selected}. Starting docker-compose...`);
-    const composeCmd = `${(0, compose_1.getComposeCommand)()} -f ${COMPOSE_FILE} up -d`;
-    runInTerminal(workspaceRoot, composeCmd);
+    await vscode.window.withProgress({
+        location: vscode.ProgressLocation.Notification,
+        title: `Project Composer: starting (${selected})`,
+        cancellable: false,
+    }, async (progress) => {
+        progress.report({ message: "docker compose up -d..." });
+        const upResult = await (0, composeExec_1.runComposeUp)(workspaceRoot, cfg.composeFileRel);
+        if (!upResult.ok) {
+            const composeCmd = `${(0, compose_1.getComposeCommand)()} -f ${cfg.composeFileRel} up -d`;
+            runInTerminal(workspaceRoot, composeCmd);
+            vscode.window.showErrorMessage(`docker compose up failed. See terminal for details.${upResult.stderr ? ` ${upResult.stderr.trim()}` : ""}`);
+            return;
+        }
+        const shouldWait = cfg.waitForContainers.length > 0;
+        if (shouldWait) {
+            const waitResult = await (0, waitForContainers_1.waitForContainersRunning)(workspaceRoot, cfg.composeFileRel, cfg.waitForContainers, cfg.waitTimeoutMs, (message) => progress.report({ message }));
+            if (!waitResult.ok) {
+                vscode.window.showWarningMessage(`Timeout waiting for containers: ${waitResult.missing.join(", ")}. Stack is up; open URLs manually if needed.`);
+            }
+        }
+        if (cfg.openBrowserOnStart) {
+            if (cfg.openUrls.length === 0) {
+                vscode.window.showWarningMessage("openBrowserOnStart is enabled but openUrls is empty. Add URLs in projectComposeEnv.openUrls.");
+            }
+            else {
+                progress.report({ message: "Opening browser..." });
+                await openBrowserUrls(cfg.openUrls);
+            }
+        }
+        vscode.window.showInformationMessage(`Stand: ${selected}. Docker Compose is running.`);
+    });
 }
 //# sourceMappingURL=start.js.map

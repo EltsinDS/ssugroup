@@ -2,7 +2,7 @@
   "name": "project-composer",
   "displayName": "Project Composer",
   "description": "Start, stop, and restart Docker Compose with per-stand env presets. By SSU Group.",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "publisher": "ssugroup",
   "icon": "icon.png",
   "engines": {
@@ -62,6 +62,42 @@
           "type": "string",
           "default": "",
           "description": "Space-separated compose service names to restart (e.g. \"node\"). Empty — restart all services."
+        },
+        "projectComposeEnv.presetsPath": {
+          "type": "string",
+          "default": "development/.env.presets",
+          "description": "Path to env preset folder, relative to workspace root."
+        },
+        "projectComposeEnv.envTargetFile": {
+          "type": "string",
+          "default": "development/.env.development",
+          "description": "Target env file to merge presets into, relative to workspace root."
+        },
+        "projectComposeEnv.composeFile": {
+          "type": "string",
+          "default": "development/docker-compose.yml",
+          "description": "Docker Compose file path, relative to workspace root."
+        },
+        "projectComposeEnv.openBrowserOnStart": {
+          "type": "boolean",
+          "default": false,
+          "description": "After Project: Start, open configured URLs in the default browser."
+        },
+        "projectComposeEnv.openUrls": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": [],
+          "description": "URLs to open when openBrowserOnStart is enabled (e.g. http://web.localhost:4000)."
+        },
+        "projectComposeEnv.waitForContainers": {
+          "type": "string",
+          "default": "",
+          "description": "Space-separated container name tokens to wait for in running state before opening browser (e.g. \"node-1 storybook-1 nginx-1\"). Matches compose container names by suffix."
+        },
+        "projectComposeEnv.waitTimeoutMs": {
+          "type": "number",
+          "default": 300000,
+          "description": "Max wait time for containers to reach running state (ms). Default: 5 minutes."
         }
       }
     }

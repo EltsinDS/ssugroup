@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
 import { getDockerCleanCommand } from "./clean";
 import { getComposeCommand } from "../compose";
-
-const COMPOSE_FILE = "development/docker-compose.yml";
+import { getProjectComposeConfig } from "../config";
 
 function getWorkspaceRoot(): string | undefined {
   const folder = vscode.workspace.workspaceFolders?.[0];
@@ -25,10 +24,11 @@ export async function stopCommand(): Promise<void> {
     return;
   }
 
+  const cfg = getProjectComposeConfig(workspaceRoot);
   const config = vscode.workspace.getConfiguration("projectComposeEnv");
   const dockerCleanOnStop = config.get<boolean>("dockerCleanOnStop") ?? false;
 
-  const downCmd = `${getComposeCommand()} -f ${COMPOSE_FILE} down`;
+  const downCmd = `${getComposeCommand()} -f ${cfg.composeFileRel} down`;
   if (dockerCleanOnStop) {
     const cleanCmd = getDockerCleanCommand();
     runInTerminal(workspaceRoot, `${downCmd}; ${cleanCmd}`, "Project Stop");

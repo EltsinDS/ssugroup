@@ -37,7 +37,7 @@ exports.stopCommand = stopCommand;
 const vscode = __importStar(require("vscode"));
 const clean_1 = require("./clean");
 const compose_1 = require("../compose");
-const COMPOSE_FILE = "development/docker-compose.yml";
+const config_1 = require("../config");
 function getWorkspaceRoot() {
     const folder = vscode.workspace.workspaceFolders?.[0];
     return folder?.uri.fsPath;
@@ -56,9 +56,10 @@ async function stopCommand() {
         vscode.window.showErrorMessage("No workspace folder open.");
         return;
     }
+    const cfg = (0, config_1.getProjectComposeConfig)(workspaceRoot);
     const config = vscode.workspace.getConfiguration("projectComposeEnv");
     const dockerCleanOnStop = config.get("dockerCleanOnStop") ?? false;
-    const downCmd = `${(0, compose_1.getComposeCommand)()} -f ${COMPOSE_FILE} down`;
+    const downCmd = `${(0, compose_1.getComposeCommand)()} -f ${cfg.composeFileRel} down`;
     if (dockerCleanOnStop) {
         const cleanCmd = (0, clean_1.getDockerCleanCommand)();
         runInTerminal(workspaceRoot, `${downCmd}; ${cleanCmd}`, "Project Stop");

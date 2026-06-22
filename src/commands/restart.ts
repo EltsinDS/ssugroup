@@ -1,7 +1,6 @@
 import * as vscode from "vscode";
 import { getComposeCommand } from "../compose";
-
-const COMPOSE_FILE = "development/docker-compose.yml";
+import { getProjectComposeConfig } from "../config";
 
 function getWorkspaceRoot(): string | undefined {
   const folder = vscode.workspace.workspaceFolders?.[0];
@@ -24,11 +23,12 @@ export async function restartCommand(): Promise<void> {
     return;
   }
 
+  const cfg = getProjectComposeConfig(workspaceRoot);
   const config = vscode.workspace.getConfiguration("projectComposeEnv");
   const services = config.get<string>("restartServices")?.trim();
 
   const serviceArg = services ? ` ${services}` : "";
-  const restartCmd = `${getComposeCommand()} -f ${COMPOSE_FILE} restart${serviceArg}`;
+  const restartCmd = `${getComposeCommand()} -f ${cfg.composeFileRel} restart${serviceArg}`;
 
   vscode.window.showInformationMessage(
     services
