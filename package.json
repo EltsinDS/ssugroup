@@ -2,7 +2,7 @@
   "name": "project-composer",
   "displayName": "Project Composer",
   "description": "Start, stop, and restart Docker Compose with per-stand env presets. By SSU Group.",
-  "version": "0.3.2",
+  "version": "3.2.2",
   "publisher": "ssugroup",
   "icon": "icon.png",
   "engines": {
@@ -118,6 +118,11 @@
           "type": "number",
           "default": 5000,
           "description": "Delay before opening secondary openUrls (e.g. Storybook) after primary URL."
+        },
+        "projectComposeEnv.showComposeOutputInTerminal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run docker compose up -d in integrated terminal (Docker pull/create progress). When false, runs silently in background."
         }
       }
     }

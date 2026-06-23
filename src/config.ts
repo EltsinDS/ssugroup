@@ -19,6 +19,7 @@ export interface ProjectComposeConfig {
   warmupUrl: string;
   warmupRequestTimeoutMs: number;
   secondaryUrlsDelayMs: number;
+  showComposeOutputInTerminal: boolean;
 }
 
 export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeConfig {
@@ -54,5 +55,6 @@ export function getProjectComposeConfig(workspaceRoot: string): ProjectComposeCo
     warmupUrl: config.get<string>("warmupUrl")?.trim() ?? "",
     warmupRequestTimeoutMs: config.get<number>("warmupRequestTimeoutMs") ?? 120_000,
     secondaryUrlsDelayMs: config.get<number>("secondaryUrlsDelayMs") ?? 5_000,
+    showComposeOutputInTerminal: config.get<boolean>("showComposeOutputInTerminal") ?? true,
   };
 }

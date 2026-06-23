@@ -121,14 +121,19 @@ export async function startCommand(): Promise<void> {
     async (progress) => {
       progress.report({ message: "docker compose up -d..." });
 
-      const upResult = await runComposeUp(workspaceRoot, cfg.composeFileRel);
-      if (!upResult.ok) {
-        const composeCmd = `${getComposeCommand()} -f ${cfg.composeFileRel} up -d`;
-        runInTerminal(workspaceRoot, composeCmd);
-        vscode.window.showErrorMessage(
-          `docker compose up failed. See terminal for details.${upResult.stderr ? ` ${upResult.stderr.trim()}` : ""}`
-        );
-        return;
+      const composeCmd = `${getComposeCommand()} -f ${cfg.composeFileRel} up -d`;
+
+      if (cfg.showComposeOutputInTerminal) {
+        runInTerminal(workspaceRoot, composeCmd, "Project Start");
+      } else {
+        const upResult = await runComposeUp(workspaceRoot, cfg.composeFileRel);
+        if (!upResult.ok) {
+          runInTerminal(workspaceRoot, composeCmd, "Project Start");
+          vscode.window.showErrorMessage(
+            `docker compose up failed. See terminal for details.${upResult.stderr ? ` ${upResult.stderr.trim()}` : ""}`
+          );
+          return;
+        }
       }
 
       if (cfg.waitForContainers.length > 0) {

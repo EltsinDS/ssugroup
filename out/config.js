@@ -64,6 +64,7 @@ function getProjectComposeConfig(workspaceRoot) {
         warmupUrl: config.get("warmupUrl")?.trim() ?? "",
         warmupRequestTimeoutMs: config.get("warmupRequestTimeoutMs") ?? 120000,
         secondaryUrlsDelayMs: config.get("secondaryUrlsDelayMs") ?? 5000,
+        showComposeOutputInTerminal: config.get("showComposeOutputInTerminal") ?? true,
     };
 }
 //# sourceMappingURL=config.js.map

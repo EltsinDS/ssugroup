@@ -62,6 +62,7 @@ Your project must have:
 | `projectComposeEnv.warmupUrl` | `""` | Primary warm-up URL (empty = first `openUrls`) |
 | `projectComposeEnv.warmupRequestTimeoutMs` | `120000` | Per-request warm-up timeout (2 min) |
 | `projectComposeEnv.secondaryUrlsDelayMs` | `5000` | Delay before opening other `openUrls` (e.g. Storybook) |
+| `projectComposeEnv.showComposeOutputInTerminal` | `true` | Show `docker compose up` output in terminal |
 
 ### Stop / restart
 

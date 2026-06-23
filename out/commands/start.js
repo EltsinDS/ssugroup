@@ -132,12 +132,17 @@ async function startCommand() {
         cancellable: false,
     }, async (progress) => {
         progress.report({ message: "docker compose up -d..." });
-        const upResult = await (0, composeExec_1.runComposeUp)(workspaceRoot, cfg.composeFileRel);
-        if (!upResult.ok) {
-            const composeCmd = `${(0, compose_1.getComposeCommand)()} -f ${cfg.composeFileRel} up -d`;
-            runInTerminal(workspaceRoot, composeCmd);
-            vscode.window.showErrorMessage(`docker compose up failed. See terminal for details.${upResult.stderr ? ` ${upResult.stderr.trim()}` : ""}`);
-            return;
+        const composeCmd = `${(0, compose_1.getComposeCommand)()} -f ${cfg.composeFileRel} up -d`;
+        if (cfg.showComposeOutputInTerminal) {
+            runInTerminal(workspaceRoot, composeCmd, "Project Start");
+        }
+        else {
+            const upResult = await (0, composeExec_1.runComposeUp)(workspaceRoot, cfg.composeFileRel);
+            if (!upResult.ok) {
+                runInTerminal(workspaceRoot, composeCmd, "Project Start");
+                vscode.window.showErrorMessage(`docker compose up failed. See terminal for details.${upResult.stderr ? ` ${upResult.stderr.trim()}` : ""}`);
+                return;
+            }
         }
         if (cfg.waitForContainers.length > 0) {
             const waitResult = await (0, waitForContainers_1.waitForContainersRunning)(workspaceRoot, cfg.composeFileRel, cfg.waitForContainers, cfg.waitTimeoutMs, (message) => progress.report({ message }));
